@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":pinGitHubActionDigests"],
+  "labels": ["dependencies"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "The container image each blueprint pins (CONTRIBUTING.md, rule 2)",
+      "managerFilePatterns": ["/^blueprints/.+\\.ya?ml$/"],
+      "matchStrings": [
+        "\\bimage: (?<depName>[^\\s:@]+):(?<currentValue>[^\\s@]+)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "A yanked release is usually gone within days; wait them out",
+      "matchDatasources": ["docker"],
+      "minimumReleaseAge": "7 days"
+    }
+  ]
+}

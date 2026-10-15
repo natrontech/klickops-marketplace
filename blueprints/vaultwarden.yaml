@@ -1,0 +1,66 @@
+apiVersion: klickops.io/v1alpha1
+kind: Blueprint
+metadata:
+  id: vaultwarden
+  name: Vaultwarden
+  description: Bitwarden-compatible password manager.
+  category: Security
+  iconLight: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/vaultwarden.svg
+  iconDark: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/vaultwarden-light.svg
+  homepage: https://github.com/dani-garcia/vaultwarden/wiki
+  sourceUrl: https://github.com/dani-garcia/vaultwarden
+  maintainer: natrontech
+spec:
+  inputs:
+    - key: signup_domains
+      label: Signup domains
+      description: Optional comma-separated email domains allowed to register.
+      type: string
+    - key: log_level
+      label: Log level
+      type: enum
+      default: info
+      options: [debug, info, warn, error]
+  project:
+    apps:
+      - id: vaultwarden
+        spec:
+          name: vaultwarden
+          image: ghcr.io/dani-garcia/vaultwarden:1.37.2
+          port: 80
+          env:
+            SIGNUPS_DOMAINS_WHITELIST: ${inputs.signup_domains}
+            LOG_LEVEL: ${inputs.log_level}
+          volumes:
+            - name: data
+              size: 1Gi
+              mountPath: /data
+              backup: fs
+          strategy: Recreate
+    services:
+      - id: database
+        spec:
+          name: vaultwarden-db
+          type: postgresql
+          version: "16"
+    domains:
+      - id: public
+        app: vaultwarden
+    bindings:
+      - id: public-url
+        app: vaultwarden
+        domain: public
+        outputKey: DOMAIN
+        field: url
+      - id: database-url
+        app: vaultwarden
+        service: database
+        outputKey: DATABASE_URL
+        field: url
+    recovery:
+      - id: daily-project-backup
+        spec:
+          enabled: true
+          cadence: daily
+          retention: 720h
+          mode: auto

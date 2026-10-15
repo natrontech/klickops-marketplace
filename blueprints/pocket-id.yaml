@@ -1,0 +1,104 @@
+apiVersion: klickops.io/v1alpha1
+kind: Blueprint
+metadata:
+  id: pocket-id
+  name: Pocket ID
+  description: The most user-friendly OpenID Connect and OAuth 2.0 provider that lets users sign in to your applications with passkeys.
+  category: Identity
+  iconLight: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/pocket-id.svg
+  iconDark: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/pocket-id-light.svg
+  homepage: https://pocket-id.org
+  sourceUrl: https://github.com/pocket-id/pocket-id
+  maintainer: natrontech
+spec:
+  inputs:
+    - key: log_level
+      label: Log level
+      type: enum
+      default: info
+      options: [debug, info, warn, error]
+  project:
+    secrets:
+      - id: encryption-key
+        scope: project
+        key: ENCRYPTION_KEY
+        generate:
+          bytes: 32
+          encoding: base64url
+    apps:
+      - id: pocket-id
+        spec:
+          name: pocket-id
+          image: ghcr.io/pocket-id/pocket-id:v2.18.0-distroless
+          port: 1411
+          env:
+            ALLOW_INSECURE_CALLBACK_URLS: "false"
+            FILE_BACKEND: s3
+            S3_FORCE_PATH_STYLE: "true"
+            LOG_LEVEL: ${inputs.log_level}
+          projectSecretKeys:
+            - ENCRYPTION_KEY
+          volumes:
+            - name: data
+              size: 1Gi
+              mountPath: /app/data
+              backup: fs
+          strategy: Recreate
+    services:
+      - id: database
+        spec:
+          name: pocket-id-db
+          type: postgresql
+          version: "16"
+      - id: object-storage
+        spec:
+          name: pocket-id-files
+          type: s3-bucket
+          params:
+            maxSize: 1Gi
+    domains:
+      - id: default
+        app: pocket-id
+    bindings:
+      - id: app-url
+        app: pocket-id
+        domain: default
+        outputKey: APP_URL
+        field: url
+      - id: database-url
+        app: pocket-id
+        service: database
+        outputKey: DB_CONNECTION_STRING
+        field: url
+      - id: s3-bucket
+        app: pocket-id
+        service: object-storage
+        outputKey: S3_BUCKET
+        field: database
+      - id: s3-region
+        app: pocket-id
+        service: object-storage
+        outputKey: S3_REGION
+        field: region
+      - id: s3-endpoint
+        app: pocket-id
+        service: object-storage
+        outputKey: S3_ENDPOINT
+        field: endpoint
+      - id: s3-access-key
+        app: pocket-id
+        service: object-storage
+        outputKey: S3_ACCESS_KEY_ID
+        field: username
+      - id: s3-secret-key
+        app: pocket-id
+        service: object-storage
+        outputKey: S3_SECRET_ACCESS_KEY
+        field: password
+    recovery:
+      - id: daily-project-backup
+        spec:
+          enabled: true
+          cadence: daily
+          retention: 720h
+          mode: auto

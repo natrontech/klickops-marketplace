@@ -1,0 +1,41 @@
+# Every pull request runs the same linter the platform runs when it loads this
+# catalog. The backend image ships it on its public downloads route, so this
+# workflow needs no credentials and lints against the parser that is live.
+name: lint
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  blueprints:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Fetch the linter the platform runs
+        run: |
+          set -euo pipefail
+          base=https://app.klickops.io/api/klickops
+          version=$(curl -fsSL "$base/version" | jq -r .version)
+          file="blueprintlint_${version}_linux_amd64.tar.gz"
+          curl -fsSLO "$base/downloads/$file"
+          curl -fsSL "$base/downloads/$file.sha256" | sha256sum -c -
+          tar -xzf "$file" blueprintlint
+          echo "platform version $version"
+
+      - name: Lint every blueprint
+        run: ./blueprintlint blueprints
+
+      # The linter checks shape; these are catalog policy (CONTRIBUTING.md).
+      - name: Only upstream images
+        run: |
+          set -euo pipefail
+          if grep -rniE 'bitnami|minio' blueprints/; then
+            echo "Bitnami and MinIO images are not accepted (CONTRIBUTING.md)." >&2
+            exit 1
+          fi

@@ -1,0 +1,25 @@
+name: Suggest a blueprint
+description: An app you want to install from the klickops marketplace.
+title: "blueprint: <app name>"
+labels: [suggestion]
+body:
+  - type: input
+    id: upstream
+    attributes:
+      label: Upstream project
+      description: The project's own repository or site.
+      placeholder: https://github.com/louislam/uptime-kuma
+    validations:
+      required: true
+  - type: input
+    id: image
+    attributes:
+      label: Container image the project publishes
+      placeholder: louislam/uptime-kuma
+  - type: textarea
+    id: why
+    attributes:
+      label: What it needs to run
+      description: A database, a bucket, a public address, settings a person has to fill in.
+    validations:
+      required: true

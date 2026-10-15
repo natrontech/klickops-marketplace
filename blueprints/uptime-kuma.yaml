@@ -1,0 +1,35 @@
+apiVersion: klickops.io/v1alpha1
+kind: Blueprint
+metadata:
+  id: uptime-kuma
+  name: Uptime Kuma
+  description: Self-hosted uptime monitoring and status dashboard.
+  category: Observability
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/uptime-kuma.svg
+  homepage: https://uptime.kuma.pet
+  sourceUrl: https://github.com/louislam/uptime-kuma
+  maintainer: natrontech
+spec:
+  project:
+    apps:
+      - id: uptime-kuma
+        spec:
+          name: uptime-kuma
+          image: louislam/uptime-kuma:2.5.3
+          port: 3001
+          volumes:
+            - name: data
+              size: 2Gi
+              mountPath: /app/data
+              backup: fs
+          strategy: Recreate
+    domains:
+      - id: public
+        app: uptime-kuma
+    recovery:
+      - id: daily-project-backup
+        spec:
+          enabled: true
+          cadence: daily
+          retention: 720h
+          mode: auto
